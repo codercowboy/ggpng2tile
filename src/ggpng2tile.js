@@ -31,6 +31,7 @@ function buildPalette(png) {
   const palette = [{ r: 0, g: 0, b: 0 }];
   // Map "r,g,b" -> palette index for opaque colors
   const seen = new Map();
+  let overflow = false;
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -41,7 +42,7 @@ function buildPalette(png) {
       const key = `${r},${g},${b}`;
       if (!seen.has(key)) {
         if (palette.length >= 16) {
-          // will be handled by nearest-color fallback at encode time
+          overflow = true;
           continue;
         }
         seen.set(key, palette.length);
@@ -50,19 +51,20 @@ function buildPalette(png) {
     }
   }
 
-  if (palette.length > 16) {
-    console.warn(`Warning: image has more than 15 opaque colors; excess colors mapped to nearest palette entry.`);
-  }
-
-  return { palette, seen };
+  return { palette, seen, overflow };
 }
 
-function getPaletteIndex(palette, seen, r, g, b, a) {
+// fallback is 'nearest' | 'transparent' | 0-15
+function getPaletteIndex(palette, seen, r, g, b, a, fallback) {
   if (a < 128) return 0;
   const key = `${r},${g},${b}`;
   if (seen.has(key)) return seen.get(key);
 
-  // Nearest-color fallback (skip index 0 / transparent slot)
+  // Color not in palette — apply fallback
+  if (fallback === 'transparent') return 0;
+  if (typeof fallback === 'number') return fallback;
+
+  // nearest: find closest color in palette (skip index 0 / transparent slot)
   let best = 1, bestDist = Infinity;
   for (let i = 1; i < palette.length; i++) {
     const d = colorDist(r, g, b, palette[i].r, palette[i].g, palette[i].b);
@@ -75,7 +77,7 @@ function getPaletteIndex(palette, seen, r, g, b, a) {
 
 // Encode one 8x8 tile at tile grid position (tileX, tileY).
 // Returns 32 bytes: 4 bitplanes × 8 rows.
-function encodeTile(png, palette, seen, tileX, tileY) {
+function encodeTile(png, palette, seen, tileX, tileY, fallback) {
   const { data, width } = png;
   const bytes = [];
 
@@ -85,7 +87,7 @@ function encodeTile(png, palette, seen, tileX, tileY) {
       const px = tileX * 8 + col;
       const py = tileY * 8 + row;
       const i = (py * width + px) * 4;
-      const idx = getPaletteIndex(palette, seen, data[i], data[i+1], data[i+2], data[i+3]);
+      const idx = getPaletteIndex(palette, seen, data[i], data[i+1], data[i+2], data[i+3], fallback);
       const bit = 7 - col; // pixel 0 → MSB
       for (let p = 0; p < 4; p++) {
         if (idx & (1 << p)) bp[p] |= (1 << bit);
@@ -119,7 +121,7 @@ function formatWordArray(name, words) {
 
 // --- Main conversion ---
 
-function convert(inputPath, varName) {
+function convert(inputPath, varName, fallback) {
   const raw = fs.readFileSync(inputPath);
   const png = PNG.sync.read(raw);
   const { width, height } = png;
@@ -129,7 +131,14 @@ function convert(inputPath, varName) {
     process.exit(1);
   }
 
-  const { palette, seen } = buildPalette(png);
+  const { palette, seen, overflow } = buildPalette(png);
+
+  if (overflow) {
+    const fallbackDesc = fallback === 'nearest' ? 'nearest palette color'
+      : fallback === 'transparent' ? 'transparent (index 0)'
+      : `palette index ${fallback}`;
+    console.warn(`Warning: more than 15 opaque colors found; excess pixels mapped to ${fallbackDesc}. Use --fallback to change this behavior.`);
+  }
 
   // Build 16-entry GG palette word array (unused slots = 0x0000)
   const paletteWords = new Array(16).fill(0);
@@ -144,7 +153,7 @@ function convert(inputPath, varName) {
   const tileBytes = [];
   for (let ty = 0; ty < tilesY; ty++) {
     for (let tx = 0; tx < tilesX; tx++) {
-      tileBytes.push(...encodeTile(png, palette, seen, tx, ty));
+      tileBytes.push(...encodeTile(png, palette, seen, tx, ty, fallback));
     }
   }
 
@@ -184,17 +193,56 @@ function convert(inputPath, varName) {
 
 // --- CLI ---
 
-const [,, input, outputName] = process.argv;
+function parseArgs(argv) {
+  const args = argv.slice(2);
+  const flags = {};
+  const positional = [];
 
-if (!input || input === '--help' || input === '-h') {
-  console.log('Usage: ggpng2tile <input.png> [output_name]');
-  console.log('  input.png    source image (dimensions must be multiples of 8)');
-  console.log('  output_name  C variable/file prefix (default: filename without extension)');
+  for (const arg of args) {
+    if (arg.startsWith('--')) {
+      const eq = arg.indexOf('=');
+      if (eq !== -1) {
+        flags[arg.slice(2, eq)] = arg.slice(eq + 1);
+      } else {
+        flags[arg.slice(2)] = true;
+      }
+    } else {
+      positional.push(arg);
+    }
+  }
+
+  return { flags, positional };
+}
+
+function parseFallback(value) {
+  if (value === undefined || value === 'nearest') return 'nearest';
+  if (value === 'transparent') return 'transparent';
+  const n = parseInt(value, 10);
+  if (!isNaN(n) && n >= 0 && n <= 15) return n;
+  console.error(`Error: --fallback must be 'nearest', 'transparent', or a palette index 0-15 (got '${value}')`);
+  process.exit(1);
+}
+
+const { flags, positional } = parseArgs(process.argv);
+const [input, outputName] = positional;
+
+if (!input || flags['help'] || flags['h']) {
+  console.log('Usage: ggpng2tile <input.png> [output_name] [options]');
+  console.log('');
+  console.log('  input.png      source image (dimensions must be multiples of 8)');
+  console.log('  output_name    C variable/file prefix (default: filename without extension)');
+  console.log('');
+  console.log('Options:');
+  console.log('  --fallback=<value>   behavior when palette is full (default: nearest)');
+  console.log('    nearest            map excess colors to the closest palette entry');
+  console.log('    transparent        map excess colors to transparent (index 0)');
+  console.log('    0-15               map excess colors to a specific palette index');
   process.exit(input ? 0 : 1);
 }
 
+const fallback = parseFallback(flags['fallback']);
 const varName = (outputName || path.basename(input, '.png')).replace(/[^a-zA-Z0-9]/g, '_');
-const { c, h, numTiles, numColors, width, height } = convert(input, varName);
+const { c, h, numTiles, numColors, width, height } = convert(input, varName, fallback);
 
 fs.writeFileSync(`${varName}.c`, c);
 fs.writeFileSync(`${varName}.h`, h);
