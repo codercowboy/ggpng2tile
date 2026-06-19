@@ -17,7 +17,7 @@ Github for this project: [https://github.com/codercowboy/ggpng2tile]().
 
 ## Requirements
 
-- [Node.js](https://nodejs.org/) v14 or later
+- [Node.js](https://nodejs.org/) v14 or later (includes npm)
 
 ## Disclaimer
 
