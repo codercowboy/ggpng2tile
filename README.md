@@ -1,10 +1,10 @@
 # ggpng2tile
 
-https://github.com/codercowboy/ggpng2tile
-
 Converts PNG sprite sheets to Game Gear / Sega Master System compatible tile data, outputting C source files ready for use with SDCC, GBDK, or any SMS/GG development toolchain.
 
 Built as a Mac-friendly alternative to tools like png2tile and bmp2tile that have build or runtime issues on macOS.
+
+Github for this project: [https://github.com/codercowboy/ggpng2tile]().
 
 ## Features
 
@@ -26,7 +26,7 @@ Built as a Mac-friendly alternative to tools like png2tile and bmp2tile that hav
 
 ## Install
 
-```sh
+```
 npm install
 ```
 
