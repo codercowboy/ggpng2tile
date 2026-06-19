@@ -72,6 +72,8 @@ extern const unsigned char ship_tiles[512];
 extern const unsigned char ship_palette[32];
 
 #define SHIP_NUM_TILES 16
+#define SHIP_TILES_SIZE 512
+#define SHIP_PALETTE_SIZE 32
 ```
 
 **`ship.c`**

@@ -8,5 +8,7 @@ extern const unsigned char ega_sample_tiles[32];
 extern const unsigned char ega_sample_palette[32];
 
 #define EGA_SAMPLE_NUM_TILES 1
+#define EGA_SAMPLE_TILES_SIZE 32
+#define EGA_SAMPLE_PALETTE_SIZE 32
 
 #endif

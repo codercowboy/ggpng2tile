@@ -161,6 +161,8 @@ export class GGPng2Tile {
       `extern const unsigned char ${varName}_palette[32];`,
       ``,
       `#define ${varName.toUpperCase()}_NUM_TILES ${numTiles}`,
+      `#define ${varName.toUpperCase()}_TILES_SIZE ${tileBytes.length}`,
+      `#define ${varName.toUpperCase()}_PALETTE_SIZE 32`,
       ``,
       `#endif`,
       ``,
