@@ -94,6 +94,29 @@ row 0: [bitplane 0] [bitplane 1] [bitplane 2] [bitplane 3]
 row 1: ...
 ```
 
+## The planar format and its quirks
+
+The Game Gear (and SMS) tile format is **planar**, not chunky. In a chunky format you'd store all 4 bits of a pixel's palette index together — e.g. the high nibble of byte 0 is pixel 0, the low nibble is pixel 1, and so on. The GG does not do this.
+
+Instead, each row of 8 pixels is represented by 4 separate bytes — one per **bitplane** — where each byte holds one bit from each of the 8 pixels in that row. Bit 7 of the byte is pixel 0, bit 6 is pixel 1, and so on down to bit 0 for pixel 7.
+
+The part that trips people up is **which bit of the palette index goes into which byte**. You might expect byte 0 to carry the most significant bit (the "first" bit written in binary), but it's the opposite: **byte 0 carries the least significant bit (bit 0) of each pixel's palette index**, byte 1 carries bit 1, byte 2 carries bit 2, and byte 3 carries bit 3 (the MSB).
+
+Concretely, if all 8 pixels in a row are palette index 1 (binary `0001`):
+
+```
+bit 0 of index 1 = 1  →  byte 0 (bitplane 0) = 0xFF  (all 8 pixels have this bit set)
+bit 1 of index 1 = 0  →  byte 1 (bitplane 1) = 0x00
+bit 2 of index 1 = 0  →  byte 2 (bitplane 2) = 0x00
+bit 3 of index 1 = 0  →  byte 3 (bitplane 3) = 0x00
+```
+
+Row encoding: `0xFF 0x00 0x00 0x00`
+
+If you wrote the palette index in binary as `0001` and expected the bytes to flow left-to-right from MSB to LSB, you'd predict `0x00 0x00 0x00 0xFF` — but it's reversed. The LSB comes first.
+
+For more detail on the tile format see the [SMS Power tile programming reference](https://www.smspower.org/maxim/HowToProgram/Tiles).
+
 ## PNG bit depth support
 
 PNG is not a single format — it has several color modes and bit depths. Here's what each means and how this tool handles them:
@@ -133,6 +156,14 @@ Width and height must both be exact multiples of 8. The tool will exit with an e
 npm install -g .
 ggpng2tile sprites/ship.png ship
 ```
+
+## Code internals
+
+For a detailed walkthrough of how the code works — the RGBA pixel buffer layout, palette building, Game Gear color packing, and the bitplane encoding with worked examples — see [docs/internals.md](docs/internals.md).
+
+## Visual walkthrough
+
+[docs/walkthrough.html](docs/walkthrough.html) is a standalone HTML document that walks through a concrete example using a sample EGA-palette PNG. It covers palette discovery, GG color word encoding, and the bitplane encoding with interactive canvas diagrams.
 
 ## Authors
 

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ggpng2tile — Sample Walkthrough</title>
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --bg2:     #161b22;
+      --bg3:     #21262d;
+      --border:  #30363d;
+      --text:    #c9d1d9;
+      --dim:     #8b949e;
+      --accent:  #58a6ff;
+      --bp0:     #ff6b6b;
+      --bp1:     #ffa94d;
+      --bp2:     #69db7c;
+      --bp3:     #74c0fc;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      padding: 40px 20px 80px;
+    }
+    .page { max-width: 860px; margin: 0 auto; }
+    h1 { font-size: 2rem; margin-bottom: 8px; color: #fff; }
+    h2 {
+      font-size: 1.25rem; margin: 48px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      color: #fff;
+    }
+    h3 { font-size: 1rem; margin: 24px 0 10px; color: var(--accent); }
+    p { margin-bottom: 14px; }
+    a { color: var(--accent); }
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      font-size: 0.875em;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+    pre {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      font-size: 0.82em;
+      line-height: 1.6;
+      margin: 16px 0;
+    }
+    .resources {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 24px 0 36px;
+    }
+    .resources p { margin-bottom: 8px; font-weight: 600; }
+    .resources ul { margin-left: 20px; }
+    .resources li { margin-bottom: 4px; }
+    .note {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 4px solid #f39c12;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 16px 0;
+      color: var(--dim);
+      font-size: 0.9em;
+    }
+    .sample-wrap {
+      display: flex;
+      align-items: flex-start;
+      gap: 32px;
+      margin: 20px 0;
+      flex-wrap: wrap;
+    }
+    .sample-img-box {
+      flex-shrink: 0;
+    }
+    .sample-img-box img {
+      display: block;
+      width: 320px;
+      height: 320px;
+      image-rendering: pixelated;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+    }
+    .sample-legend { flex: 1; min-width: 220px; }
+    canvas { display: block; max-width: 100%; }
+    .canvas-wrap {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85em;
+      margin: 16px 0;
+    }
+    th {
+      background: var(--bg3);
+      color: var(--dim);
+      font-weight: 600;
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 2px solid var(--border);
+    }
+    td {
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    .swatch {
+      display: inline-block;
+      width: 20px; height: 20px;
+      border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.15);
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    .mono { font-family: 'JetBrains Mono', Consolas, monospace; }
+    .bp0 { color: var(--bp0); font-weight: 700; }
+    .bp1 { color: var(--bp1); font-weight: 700; }
+    .bp2 { color: var(--bp2); font-weight: 700; }
+    .bp3 { color: var(--bp3); font-weight: 700; }
+    .dim { color: var(--dim); }
+    .bit-row {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      font-family: monospace;
+      font-size: 0.9em;
+      margin: 3px 0;
+    }
+    .bit { width: 28px; text-align: center; }
+    .bit-label { width: 32px; font-size: 0.8em; color: var(--dim); }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px; height: 28px;
+      background: var(--accent);
+      color: #000;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 0.85em;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      margin: 36px 0 14px;
+    }
+    .step-header h2 {
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <h1>ggpng2tile — Sample Walkthrough</h1>
+  <p class="dim">A concrete example of how a PNG becomes Game Gear tile data.</p>
+
+  <div class="resources">
+    <p>Better references — read these first</p>
+    <ul>
+      <li><a href="https://www.smspower.org/maxim/HowToProgram/Palette" target="_blank">SMS Power: Palette format</a> — how the GG/SMS palette CRAM works</li>
+      <li><a href="https://www.smspower.org/maxim/HowToProgram/Tiles" target="_blank">SMS Power: Tile format</a> — how tile bitplanes are laid out in VRAM</li>
+    </ul>
+    <p style="margin-top:10px;margin-bottom:0;font-weight:400;color:var(--dim);font-size:0.9em;">
+      Maxim's documentation at SMS Power should be considered more reliable and concise than this page.
+      What this document offers that those don't is a fully worked concrete example tied to a specific PNG input.
+    </p>
+  </div>
+
+  <!-- ───────────────────────────── THE IMAGE ───────────────────────────── -->
+  <h2>The sample image</h2>
+
+  <div class="sample-wrap">
+    <div class="sample-img-box">
+      <img src="sample.png" alt="8×8 sample PNG">
+      <p style="margin-top:8px;font-size:0.8em;color:var(--dim);text-align:center;">
+        sample.png — actual size 8×8 px, shown at 320×320
+      </p>
+    </div>
+    <div class="sample-legend">
+      <p>The image is a single 8×8 pixel tile — one column per pixel wide, split horizontally at row 4.</p>
+      <p>Each column holds two colors from the <strong>standard EGA palette</strong>:
+         the top 4 rows show one color, the bottom 4 rows show another.
+         Column 0 is the exception: its top half is fully <strong>transparent</strong>
+         (alpha = 0), which will become palette index&nbsp;0.</p>
+      <p>Together, the 8 columns × 2 halves use exactly <strong>15 opaque EGA colors</strong>
+         plus the 1 transparent slot — filling all 16 Game Gear palette entries.</p>
+      <p style="margin-bottom:0;">Bright Magenta is the one EGA color not represented, to stay within 15 opaque slots.</p>
+    </div>
+  </div>
+
+  <!-- ───────────────────────────── STEP 1 ────────────────────────────── -->
+  <div class="step-header">
+    <span class="step-num">1</span>
+    <h2>Palette discovery</h2>
+  </div>
+
+  <p>ggpng2tile scans pixels <strong>left-to-right, top-to-bottom</strong>.
+     Each unique opaque RGB value it encounters gets the next available palette slot.
+     Palette index 0 is pre-reserved for transparent.</p>
+
+  <p>Because the top half (rows 0–3) is scanned first, the 7 opaque top-half colors
+     take slots 1–7. The 8 bottom-half colors arrive later and take slots 8–15.</p>
+
+  <div class="canvas-wrap">
+    <canvas id="gridCanvas" width="480" height="520"></canvas>
+  </div>
+
+  <p>The result: the top-half pixel at column <em>x</em> has palette index <em>x</em>
+     (0 through 7), and the bottom-half pixel at column <em>x</em> has palette index
+     <em>x + 8</em> (8 through 15). This clean mapping is what makes the bitplane
+     output so regular.</p>
+
+  <!-- ───────────────────────────── STEP 2 ────────────────────────────── -->
+  <div class="step-header">
+    <span class="step-num">2</span>
+    <h2>GG palette word encoding</h2>
+  </div>
+
+  <p>Each palette entry is stored in the GG's Color RAM (CRAM) as a
+     <strong>16-bit little-endian word</strong>. Only the low 12 bits are used —
+     4 bits per channel, in BGR order:</p>
+
+  <pre>Bit: 15 14 13 12 | 11 10  9  8 |  7  6  5  4 |  3  2  1  0
+     (unused = 0)   B3 B2 B1 B0   G3 G2 G1 G0   R3 R2 R1 R0</pre>
+
+  <p>An 8-bit source channel (0–255) is scaled to 4 bits by shifting right by 4
+     (<code>v >> 4</code>), mapping 256 values into 16 equal bands.
+     For example, 170 &gt;&gt; 4 = 10 = <code>0xA</code>, and 85 &gt;&gt; 4 = 5 = <code>0x5</code>.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Color</th>
+        <th>RGB (8-bit)</th>
+        <th>4-bit R G B</th>
+        <th>GG word</th>
+        <th>Bit layout <span class="dim" style="font-weight:400">(bits 11–0)</span></th>
+      </tr>
+    </thead>
+    <tbody id="paletteTable"></tbody>
+  </table>
+
+  <div class="note">
+    Note that palette index 0 (transparent) and index 8 (Black) both produce the word
+    <code>0x0000</code>. The hardware treats index 0 as always-transparent regardless of
+    the color stored there — so the bit pattern for black at slot 0 is irrelevant.
+    What distinguishes a transparent pixel from a black pixel is the palette
+    <em>index</em>, not the color word.
+  </div>
+
+  <!-- ───────────────────────────── STEP 3 ────────────────────────────── -->
+  <div class="step-header">
+    <span class="step-num">3</span>
+    <h2>Tile bitplane encoding</h2>
+  </div>
+
+  <p>The GG stores each 8×8 tile as 32 bytes. Each row of 8 pixels becomes
+     4 bytes — one per <strong>bitplane</strong>. Bitplane 0 holds bit 0 (the LSB) of
+     every pixel's palette index in that row; bitplane 1 holds bit 1; and so on up
+     to bitplane 3 (the MSB). Within each byte, pixel 0 is the MSB of the byte
+     and pixel 7 is the LSB.</p>
+
+  <p>The palette indices for this image are:</p>
+  <ul style="margin: 0 0 14px 22px;">
+    <li><strong>Rows 0–3:</strong> <code>[ 0, 1, 2, 3, 4, 5, 6, 7 ]</code></li>
+    <li><strong>Rows 4–7:</strong> <code>[ 8, 9, 10, 11, 12, 13, 14, 15 ]</code></li>
+  </ul>
+
+  <p>Because all rows within each half are identical, the tile has only two distinct
+     row encodings to work out.</p>
+
+  <h3>Rows 0–3: indices [ 0, 1, 2, 3, 4, 5, 6, 7 ]</h3>
+  <div class="canvas-wrap">
+    <canvas id="bpCanvas0" width="740" height="400"></canvas>
+  </div>
+
+  <h3>Rows 4–7: indices [ 8, 9, 10, 11, 12, 13, 14, 15 ]</h3>
+  <div class="canvas-wrap">
+    <canvas id="bpCanvas4" width="740" height="400"></canvas>
+  </div>
+
+  <p>Notice that bitplanes 0, 1, and 2 produce <strong>identical bytes in both halves</strong>
+     (<code>0x55</code>, <code>0x33</code>, <code>0x0f</code>). The only difference is
+     bitplane 3: indices 0–7 all have bit 3 = 0 → <code>0x00</code>,
+     while indices 8–15 all have bit 3 = 1 → <code>0xff</code>.</p>
+
+  <!-- ───────────────────────────── OUTPUT ───────────────────────────── -->
+  <h2>The output</h2>
+
+  <p>Running <code>node src/ggpng2tile.js docs/sample.png sample</code> from the
+     project root produces:</p>
+
+  <pre>/* Generated by ggpng2tile from sample.png */
+/* 8x8 px — 1 tile, 15 colors + transparent */
+
+const unsigned char sample_tiles[32] = {
+    0x55, 0x33, 0x0f, 0x00, 0x55, 0x33, 0x0f, 0x00, 0x55, 0x33, 0x0f, 0x00, 0x55, 0x33, 0x0f, 0x00,
+    0x55, 0x33, 0x0f, 0xff, 0x55, 0x33, 0x0f, 0xff, 0x55, 0x33, 0x0f, 0xff, 0x55, 0x33, 0x0f, 0xff,
+};
+
+const unsigned short sample_palette[16] = {
+    0x0000, 0x0a00, 0x00a0, 0x0aa0, 0x000a, 0x0a0a, 0x005a, 0x0aaa, 0x0000, 0x0555, 0x0f55, 0x05f5, 0x0ff5, 0x055f, 0x05ff, 0x0fff
+};</pre>
+
+  <p>The first 16 bytes of <code>sample_tiles</code> are rows 0–3 (four copies of
+     <code>0x55 0x33 0x0f 0x00</code>) and the last 16 bytes are rows 4–7
+     (four copies of <code>0x55 0x33 0x0f 0xff</code>).</p>
+
+</div><!-- .page -->
+
+<script>
+// ─── data ────────────────────────────────────────────────────────────────────
+
+const PALETTE = [
+  { idx:  0, name: 'Transparent',  rgb: null,            word: 0x0000 },
+  { idx:  1, name: 'Blue',         rgb: [0,   0,   170], word: 0x0A00 },
+  { idx:  2, name: 'Green',        rgb: [0,   170, 0  ], word: 0x00A0 },
+  { idx:  3, name: 'Cyan',         rgb: [0,   170, 170], word: 0x0AA0 },
+  { idx:  4, name: 'Red',          rgb: [170, 0,   0  ], word: 0x000A },
+  { idx:  5, name: 'Magenta',      rgb: [170, 0,   170], word: 0x0A0A },
+  { idx:  6, name: 'Brown',        rgb: [170, 85,  0  ], word: 0x005A },
+  { idx:  7, name: 'Light Gray',   rgb: [170, 170, 170], word: 0x0AAA },
+  { idx:  8, name: 'Black',        rgb: [0,   0,   0  ], word: 0x0000 },
+  { idx:  9, name: 'Dark Gray',    rgb: [85,  85,  85 ], word: 0x0555 },
+  { idx: 10, name: 'Bright Blue',  rgb: [85,  85,  255], word: 0x0F55 },
+  { idx: 11, name: 'Bright Green', rgb: [85,  255, 85 ], word: 0x05F5 },
+  { idx: 12, name: 'Bright Cyan',  rgb: [85,  255, 255], word: 0x0FF5 },
+  { idx: 13, name: 'Bright Red',   rgb: [255, 85,  85 ], word: 0x055F },
+  { idx: 14, name: 'Yellow',       rgb: [255, 255, 85 ], word: 0x05FF },
+  { idx: 15, name: 'White',        rgb: [255, 255, 255], word: 0x0FFF },
+];
+
+// pixel[row][col] = palette index
+const PIXELS = Array.from({ length: 8 }, (_, row) =>
+  Array.from({ length: 8 }, (_, col) => row < 4 ? col : col + 8)
+);
+
+const BP_COLORS = ['#ff6b6b', '#ffa94d', '#69db7c', '#74c0fc']; // bp0..bp3
+
+// ─── helpers ─────────────────────────────────────────────────────────────────
+
+function rgbStr(rgb) {
+  return rgb ? `rgb(${rgb[0]},${rgb[1]},${rgb[2]})` : null;
+}
+
+function textColor(rgb) {
+  if (!rgb) return '#999';
+  const lum = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+  return lum > 140 ? '#000' : '#fff';
+}
+
+function hex2(v) { return '0x' + v.toString(16).padStart(2, '0'); }
+function hex4(v) { return '0x' + v.toString(16).padStart(4, '0'); }
+function pad4bin(n) { return n.toString(2).padStart(4, '0'); }
+function pad12bin(n) { return n.toString(2).padStart(12, '0'); }
+
+// ─── checkerboard helper ─────────────────────────────────────────────────────
+
+function drawCheckerboard(ctx, x, y, w, h, size = 6) {
+  const cols = Math.ceil(w / size), rows = Math.ceil(h / size);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      ctx.fillStyle = (r + c) % 2 === 0 ? '#444' : '#222';
+      ctx.fillRect(x + c * size, y + r * size, Math.min(size, w - c*size), Math.min(size, h - r*size));
+    }
+  }
+}
+
+// ─── palette table ───────────────────────────────────────────────────────────
+
+const tbody = document.getElementById('paletteTable');
+PALETTE.forEach(p => {
+  const r4 = p.rgb ? p.rgb[0] >> 4 : 0;
+  const g4 = p.rgb ? p.rgb[1] >> 4 : 0;
+  const b4 = p.rgb ? p.rgb[2] >> 4 : 0;
+  const bits = pad12bin(p.word); // b11..b0
+  // bits layout: bits[0..3]=blue bits[4..7]=green bits[8..11]=red
+  const bBits = bits.slice(0, 4);   // B3..B0
+  const gBits = bits.slice(4, 8);   // G3..G0
+  const rBits = bits.slice(8, 12);  // R3..R0
+
+  const swatchStyle = p.rgb
+    ? `background:rgb(${p.rgb.join(',')});`
+    : 'background: repeating-conic-gradient(#444 0% 25%, #222 0% 50%) 0 0 / 8px 8px;';
+
+  const rgbText  = p.rgb ? `(${p.rgb.join(', ')})` : '(transparent)';
+  const chanText = p.rgb ? `${r4}  ${g4}  ${b4}` : '—';
+
+  tbody.innerHTML += `
+    <tr>
+      <td class="mono" style="color:var(--dim)">${p.idx}</td>
+      <td>
+        <span class="swatch" style="${swatchStyle}"></span>${p.name}
+      </td>
+      <td class="mono">${rgbText}</td>
+      <td class="mono">${chanText}</td>
+      <td class="mono"><strong>${hex4(p.word)}</strong></td>
+      <td class="mono" style="font-size:0.8em;">
+        <span style="color:var(--bp3)">${bBits}</span><!--
+        --><span style="color:var(--bp2)">${gBits}</span><!--
+        --><span style="color:var(--bp0)">${rBits}</span>
+      </td>
+    </tr>`;
+});
+
+// ─── annotated pixel grid canvas ─────────────────────────────────────────────
+
+(function drawGrid() {
+  const canvas = document.getElementById('gridCanvas');
+  const ctx = canvas.getContext('2d');
+  const CELL = 56;
+  const LABEL_H = 30;
+  const GRID_W = 8 * CELL;
+  const GRID_H = 8 * CELL;
+  const OX = 10, OY = 36;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Column headers
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '11px monospace';
+  ctx.textAlign = 'center';
+  for (let x = 0; x < 8; x++) {
+    ctx.fillText(`col ${x}`, OX + x * CELL + CELL / 2, OY - 12);
+  }
+
+  // Row labels
+  ctx.textAlign = 'right';
+  for (let y = 0; y < 8; y++) {
+    ctx.fillText(`row ${y}`, OX - 6, OY + y * CELL + CELL / 2 + 4);
+  }
+
+  // Halves background label
+  ctx.save();
+  ctx.fillStyle = 'rgba(88,166,255,0.07)';
+  ctx.fillRect(OX, OY, GRID_W, CELL * 4);
+  ctx.fillStyle = 'rgba(88,166,255,0.04)';
+  ctx.fillRect(OX, OY + CELL * 4, GRID_W, CELL * 4);
+  ctx.restore();
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const idx = PIXELS[row][col];
+      const entry = PALETTE[idx];
+      const cx = OX + col * CELL;
+      const cy = OY + row * CELL;
+
+      // Fill
+      if (!entry.rgb) {
+        drawCheckerboard(ctx, cx, cy, CELL, CELL, 8);
+      } else {
+        ctx.fillStyle = rgbStr(entry.rgb);
+        ctx.fillRect(cx, cy, CELL, CELL);
+      }
+
+      // Border
+      ctx.strokeStyle = '#30363d';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cx + 0.5, cy + 0.5, CELL - 1, CELL - 1);
+
+      // Palette index badge
+      const tc = textColor(entry.rgb);
+      ctx.fillStyle = tc === '#000' ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.roundRect(cx + 4, cy + 4, 22, 18, 3);
+      ctx.fill();
+      ctx.fillStyle = tc;
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(idx, cx + 15, cy + 16);
+
+      // Color name (small, bottom of cell)
+      if (CELL >= 50) {
+        ctx.fillStyle = tc === '#000' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'center';
+        const label = entry.rgb
+          ? entry.name.replace('Bright ', 'Br.')
+          : 'TRANSP';
+        ctx.fillText(label, cx + CELL / 2, cy + CELL - 6);
+      }
+    }
+  }
+
+  // Scan order arrow annotation
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = 'italic 11px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('← scan order: left→right, top→bottom', OX, OY + GRID_H + 20);
+
+  // Dashed divider between top/bottom half
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(OX, OY + CELL * 4);
+  ctx.lineTo(OX + GRID_W, OY + CELL * 4);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('slots 1–7 assigned here ↑', OX + GRID_W, OY + CELL * 4 - 5);
+  ctx.fillText('slots 8–15 assigned here ↓', OX + GRID_W, OY + CELL * 4 + 14);
+})();
+
+// ─── bitplane breakdown canvas ────────────────────────────────────────────────
+
+function drawBitplaneCanvas(canvasId, rowIndices) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const LPAD   = 60;   // left padding for row labels
+  const RPAD   = 110;  // right padding for result hex
+  const CW     = 72;   // cell width per pixel column
+  const TOTAL  = LPAD + 8 * CW + RPAD;
+
+  // ── section 1: pixel row ──────────────────────────────────────────────────
+  const PIX_Y  = 10;
+  const PIX_H  = 52;
+  const IDX_Y  = PIX_Y + PIX_H + 6;   // index label row
+  const BIN_Y  = IDX_Y + 20;          // top of binary bit display (bit 3 first)
+  const BIN_ROW_H = 17;
+
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('pixel →', LPAD - 6, PIX_Y + PIX_H / 2 + 4);
+
+  for (let col = 0; col < 8; col++) {
+    const idx = PIXELS[rowIndices[0]][col];
+    const entry = PALETTE[idx];
+    const cx = LPAD + col * CW + 4;
+    const cy = PIX_Y;
+    const PW = CW - 8;
+
+    if (!entry.rgb) {
+      drawCheckerboard(ctx, cx, cy, PW, PIX_H, 7);
+    } else {
+      ctx.fillStyle = rgbStr(entry.rgb);
+      ctx.fillRect(cx, cy, PW, PIX_H);
+    }
+    ctx.strokeStyle = '#30363d';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx + 0.5, cy + 0.5, PW - 1, PIX_H - 1);
+
+    // index number
+    ctx.fillStyle = textColor(entry.rgb);
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(idx, cx + PW / 2, cy + PIX_H / 2 + 5);
+
+    // index decimal below cell
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(idx, LPAD + col * CW + CW / 2, IDX_Y + 14);
+
+    // 4-bit binary — one digit per bitplane row, bit 3 at top
+    const bin = pad4bin(idx);
+    for (let b = 3; b >= 0; b--) {
+      const digit = (idx >> b) & 1;
+      const ry = BIN_Y + (3 - b) * BIN_ROW_H;
+      ctx.fillStyle = BP_COLORS[b];
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(digit, LPAD + col * CW + CW / 2, ry + 12);
+    }
+  }
+
+  // binary column header
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('index', LPAD - 6, IDX_Y + 14);
+  ctx.fillText('binary', LPAD - 6, BIN_Y + 12);
+
+  // bitplane row labels for binary section
+  for (let b = 3; b >= 0; b--) {
+    const ry = BIN_Y + (3 - b) * BIN_ROW_H;
+    ctx.fillStyle = BP_COLORS[b];
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`bit${b}`, LPAD - 6, ry + 12);
+  }
+
+  // ── section 2: bitplane bytes ─────────────────────────────────────────────
+  const SEP_Y  = BIN_Y + 4 * BIN_ROW_H + 18;
+  const BP_Y   = SEP_Y + 24;
+  const BP_H   = 38;
+  const BP_GAP = 8;
+
+  // Separator line
+  ctx.strokeStyle = '#30363d';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(LPAD, SEP_Y);
+  ctx.lineTo(TOTAL - RPAD + 10, SEP_Y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#8b949e';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('↓ each bitplane extracts one bit from each pixel\'s index above', LPAD, SEP_Y + 14);
+
+  for (let bp = 0; bp < 4; bp++) {
+    const by = BP_Y + bp * (BP_H + BP_GAP);
+    const rowIdx = rowIndices[0];
+    const byteOffset = rowIdx * 4 + bp;
+
+    // Label
+    ctx.fillStyle = BP_COLORS[bp];
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`BP${bp}:`, LPAD - 6, by + BP_H / 2 + 5);
+
+    // 8 bit cells
+    let bpByte = 0;
+    for (let col = 0; col < 8; col++) {
+      const idx = PIXELS[rowIdx][col];
+      const bit = (idx >> bp) & 1;
+      const bitPos = 7 - col; // pixel 0 → MSB
+      if (bit) bpByte |= (1 << bitPos);
+
+      const bx = LPAD + col * CW + 4;
+      const BW = CW - 8;
+
+      // Cell background
+      ctx.fillStyle = bit ? BP_COLORS[bp] + '30' : '#21262d';
+      ctx.strokeStyle = BP_COLORS[bp] + '60';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(bx, by + 4, BW, BP_H - 8, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      // Bit value
+      ctx.fillStyle = bit ? BP_COLORS[bp] : '#484f58';
+      ctx.font = `bold 16px monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(bit, bx + BW / 2, by + BP_H / 2 + 6);
+    }
+
+    // Result byte
+    const hexStr = hex2(bpByte);
+    const binStr = bpByte.toString(2).padStart(8, '0');
+    ctx.fillStyle = BP_COLORS[bp];
+    ctx.font = 'bold 12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`= ${binStr}b`, LPAD + 8 * CW + 8, by + BP_H / 2 - 2);
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText(hexStr, LPAD + 8 * CW + 8, by + BP_H / 2 + 16);
+  }
+}
+
+drawBitplaneCanvas('bpCanvas0', [0, 1, 2, 3]);
+drawBitplaneCanvas('bpCanvas4', [4, 5, 6, 7]);
+</script>
+</body>
+</html>
