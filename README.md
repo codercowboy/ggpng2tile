@@ -1,7 +1,5 @@
 # ggpng2tile
 
-> **Note:** This tool was quickly vibecoded with Claude in 2026. The code may not be written exactly how I'd prefer, but in the interest of time expediency I'm leaving it as-is — besides, Claude is super great at writing code nowadays.
-
 Converts PNG sprite sheets to Game Gear / Sega Master System compatible tile data, outputting C source files ready for use with SDCC, GBDK, or any SMS/GG development toolchain.
 
 Built as a Mac-friendly alternative to tools like png2tile and bmp2tile that have build or runtime issues on macOS.
@@ -19,6 +17,11 @@ Built as a Mac-friendly alternative to tools like png2tile and bmp2tile that hav
 
 - [Node.js](https://nodejs.org/) v14 or later
 
+## Disclaimer
+
+**Note:** This tool was quickly vibecoded with Claude in 2026. The code may not be written exactly how I'd prefer, but in the interest of time expediency I'm leaving it as-is — besides, Claude is super great at writing code nowadays.
+
+
 ## Install
 
 ```sh
@@ -27,7 +30,7 @@ npm install
 
 ## Usage
 
-```sh
+```
 node src/ggpng2tile.js <input.png> [output_name] [options]
 ```
 
@@ -36,7 +39,7 @@ node src/ggpng2tile.js <input.png> [output_name] [options]
 
 **Example:**
 
-```sh
+```
 node src/ggpng2tile.js sprites/ship.png ship
 ```
 
@@ -54,7 +57,7 @@ Controls what happens when the palette is full (15 opaque colors already found) 
 | `transparent` | Map the pixel to palette index 0 (transparent) |
 | `0`–`15` | Map the pixel to a specific palette index you choose |
 
-```sh
+```
 node src/ggpng2tile.js ship.png --fallback=nearest
 node src/ggpng2tile.js ship.png --fallback=transparent
 node src/ggpng2tile.js ship.png --fallback=3
@@ -63,27 +66,32 @@ node src/ggpng2tile.js ship.png --fallback=3
 ### Output
 
 **`ship.h`**
-```c
+
+```
 extern const unsigned char ship_tiles[512];
-extern const unsigned short ship_palette[16];
+extern const unsigned char ship_palette[32];
 
 #define SHIP_NUM_TILES 16
 ```
 
 **`ship.c`**
-```c
+
+```
 const unsigned char ship_tiles[512] = {
-    0x00, 0x00, ...
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    ...
 };
 
-const unsigned short ship_palette[16] = {
-    0x0000, 0x000f, ...
+const unsigned char ship_palette[32] = {
+    0x00, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 ```
 
 ### Palette format
 
-Each palette entry is a 16-bit little-endian word: `0000BBBBGGGGRRRR` (4 bits per channel). Index 0 is always the transparent color.
+Each GG palette entry is a 12-bit color packed into 2 little-endian bytes: `0000BBBBGGGGRRRR` (4 bits per channel, R in low nibble). The palette is output as `unsigned char[32]` — 16 entries × 2 bytes each — to make the byte layout explicit and avoid any toolchain ambiguity around integer sizes. Index 0 is always the transparent color.
 
 ### Tile format
 
@@ -152,7 +160,7 @@ Width and height must both be exact multiples of 8. The tool will exit with an e
 
 ## Install as a global CLI (optional)
 
-```sh
+```
 npm install -g .
 ggpng2tile sprites/ship.png ship
 ```

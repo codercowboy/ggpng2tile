@@ -112,19 +112,39 @@ export function formatByteArray(name, bytes, cols = 16) {
 }
 
 /**
- * Render a 16-entry array of 16-bit palette words as a C unsigned short
- * array definition. Always emits exactly 16 entries (the full GG palette).
+ * Render a 16-entry GG palette as a C unsigned char array of raw little-endian
+ * bytes. Each 12-bit GG color word is stored as 2 bytes (LE), so 16 palette
+ * entries become 32 bytes total.
  *
- * Output example:
+ * Outputting as unsigned char (rather than unsigned short) makes the 2-bytes-
+ * per-entry layout explicit and avoids any ambiguity around short/int sizes
+ * across different Z80 toolchains.
  *
- *   const unsigned short ship_palette[16] = {
- *       0x0000, 0x000f, 0x0f00, 0x0000, ...
+ * Byte layout for one entry (LE 16-bit word 0x0RGB):
+ *   byte 0 (low):  GGGG RRRR
+ *   byte 1 (high): 0000 BBBB
+ *
+ * Output example (cols=8 entries per line = 16 bytes per line):
+ *
+ *   const unsigned char ship_palette[32] = {
+ *       0x00, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+ *       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
  *   };
  *
  * @param {string} name - The C variable name.
  * @param {number[]} words - Array of 16 palette word values.
+ * @param {number} cols - Palette entries per line (default 8 → 16 bytes per line).
  */
-export function formatWordArray(name, words) {
-  const hex = words.map(hex4).join(', ');
-  return `const unsigned short ${name}[16] = {\n    ${hex}\n};`;
+export function formatWordArray(name, words, cols = 8) {
+  // Flatten each 16-bit word to two little-endian bytes.
+  // Example: 0x0A00 (Blue) → [0x00, 0x0A]
+  const bytes = words.flatMap(w => [w & 0xFF, (w >> 8) & 0xFF]);
+  const byteCols = cols * 2; // 2 bytes per palette entry
+  const lines = [`const unsigned char ${name}[${bytes.length}] = {`];
+  for (let i = 0; i < bytes.length; i += byteCols) {
+    const chunk = bytes.slice(i, i + byteCols).map(hex2).join(', ');
+    lines.push(`    ${chunk},`);
+  }
+  lines.push(`};`);
+  return lines.join('\n');
 }

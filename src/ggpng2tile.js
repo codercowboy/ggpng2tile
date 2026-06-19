@@ -146,7 +146,7 @@ export class GGPng2Tile {
 
     const c = [
       fileHeader,
-      formatByteArray(`${varName}_tiles`, tileBytes),
+      formatByteArray(`${varName}_tiles`, tileBytes, 4),
       ``,
       formatWordArray(`${varName}_palette`, paletteWords),
       ``,
@@ -158,7 +158,7 @@ export class GGPng2Tile {
       `#define ${varName.toUpperCase()}_H`,
       ``,
       `extern const unsigned char ${varName}_tiles[${tileBytes.length}];`,
-      `extern const unsigned short ${varName}_palette[16];`,
+      `extern const unsigned char ${varName}_palette[32];`,
       ``,
       `#define ${varName.toUpperCase()}_NUM_TILES ${numTiles}`,
       ``,
