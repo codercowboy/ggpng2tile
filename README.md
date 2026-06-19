@@ -165,6 +165,32 @@ npm install -g .
 ggpng2tile sprites/ship.png ship
 ```
 
+## Alternatives
+
+Other tools that convert graphics to SMS/GG tile data. Each has different tradeoffs depending on your OS and target hardware.
+
+### [bmp2tile](https://github.com/maxim-zhao/bmp2tile) — Windows only
+
+The most full-featured SMS/GG tile converter available. If you're on Windows, use this instead. Actively maintained, well-documented, and purpose-built for the SMS/GG format. Docs: [smspower.org/maxim/Software/BMP2Tile](https://www.smspower.org/maxim/Software/BMP2Tile/)
+
+### [gbdk-2020 png2asset](https://github.com/gbdk-2020/gbdk-2020) — cross-platform
+
+Part of the GBDK-2020 toolchain. Supports SMS tile, palette, and map output, and runs fine on macOS. The caveat for Game Gear development specifically: png2asset targets the SMS palette format (RGB222, 6-bit color), not the GG palette format (RGB444, 12-bit color). If you're writing GG code and need accurate 12-bit palette words, you'll need to post-process its output or use a different tool. Docs: [gbdk.org png2asset settings](https://gbdk.org/docs/api/docs_toolchain_settings.html#png2asset-settings)
+
+### [png2tile](https://github.com/yuv422/png2tile) — currently broken on macOS
+
+Compiles without errors on macOS but fails at runtime today. An SMS Power Discord user has reportedly gotten a v1.0 release working, so it may be resolvable — worth checking the thread. For now, assume it doesn't work on Mac out of the box and it'll probably be fine in the future. Docs: [smspower.org forums thread](https://www.smspower.org/forums/15889-PNG2Tile)
+
+### [SuperFamiconv](https://github.com/Optiroc/SuperFamiconv) — capable but Mac setup is involved
+
+Very capable multi-platform tile converter that supports SMS output. Two things to be aware of:
+
+**Palette format:** Same issue as png2asset — the SMS output mode uses SMS palette encoding, not GG 12-bit palette encoding. Requires post-processing if you're targeting the Game Gear.
+
+**macOS build:** Requires GCC >8 for C++20 support. Apple's Xcode Command Line Tools ship a version of Clang that doesn't satisfy this requirement (as of June 2026). The workaround is to install a real GCC via Homebrew (`brew install gcc@15`) and pass CMake parameters at build time to point at the Homebrew binaries in `/opt/homebrew/bin` rather than the system ones.
+
+Additionally, SuperFamiconv may bail out when a PNG contains more than 16 colors in the file even if the actual pixel data uses 16 or fewer — this can happen with PNGs that embed a full 256-entry palette in their header. Reducing the PNG to an indexed palette with exactly the colors you need (e.g., via Aseprite) before passing it in resolves this.
+
 ## Code internals
 
 For a detailed walkthrough of how the code works — the RGBA pixel buffer layout, palette building, Game Gear color packing, and the bitplane encoding with worked examples — see [docs/internals.md](docs/internals.md).
