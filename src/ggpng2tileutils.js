@@ -17,11 +17,11 @@
  * harmless since >> 4 on a value 0-255 already fits in 4 bits.
  *
  * Example:
- *   to4bit(255) → 255 >> 4 = 15   (0b1111)
- *   to4bit(128) → 128 >> 4 = 8    (0b1000)
- *   to4bit(0)   → 0   >> 4 = 0    (0b0000)
+ *   convert8bitColorTo4bit(255) → 255 >> 4 = 15   (0b1111)
+ *   convert8bitColorTo4bit(128) → 128 >> 4 = 8    (0b1000)
+ *   convert8bitColorTo4bit(0)   → 0   >> 4 = 0    (0b0000)
  */
-export function to4bit(v) {
+export function convert8bitColorTo4bit(v) {
   return (v >> 4) & 0xF;
 }
 
@@ -33,7 +33,7 @@ export function to4bit(v) {
  *   Bit: 15 14 13 12 | 11 10  9  8 |  7  6  5  4 |  3  2  1  0
  *        (unused = 0)   B3 B2 B1 B0   G3 G2 G1 G0   R3 R2 R1 R0
  *
- * Each channel is first reduced to 4 bits via to4bit(), then placed into
+ * Each channel is first reduced to 4 bits via convert8bitColorTo4bit(), then placed into
  * its field by shifting:
  *
  *   Red   → bits  0-3  (no shift needed)
@@ -41,9 +41,9 @@ export function to4bit(v) {
  *   Blue  → bits 8-11  (shift left 8)
  *
  * Example: RGB(255, 128, 0) — full red, half green, no blue
- *   to4bit(255) = 15  (0b1111)
- *   to4bit(128) = 8   (0b1000)
- *   to4bit(0)   = 0   (0b0000)
+ *   convert8bitColorTo4bit(255) = 15  (0b1111)
+ *   convert8bitColorTo4bit(128) = 8   (0b1000)
+ *   convert8bitColorTo4bit(0)   = 0   (0b0000)
  *
  *   result = (0 << 8) | (8 << 4) | 15
  *          = 0x0000   | 0x0080   | 0x000F
@@ -53,7 +53,7 @@ export function to4bit(v) {
  * would be 0x8F, 0x00.
  */
 export function packGGColor(r, g, b) {
-  return (to4bit(b) << 8) | (to4bit(g) << 4) | to4bit(r);
+  return (convert8bitColorTo4bit(b) << 8) | (convert8bitColorTo4bit(g) << 4) | convert8bitColorTo4bit(r);
 }
 
 /**
@@ -101,7 +101,7 @@ export function hex4(v) { return `0x${v.toString(16).padStart(4, '0')}`; }
  * @param {number[]} bytes - Array of byte values (0-255).
  * @param {number} cols - How many hex values to print per line (default 16).
  */
-export function formatByteArray(name, bytes, cols = 16) {
+export function toCTilesArraySoureCode(name, bytes, cols = 16) {
   const lines = [`const unsigned char ${name}[${bytes.length}] = {`];
   for (let i = 0; i < bytes.length; i += cols) {
     const chunk = bytes.slice(i, i + cols).map(hex2).join(', ');
@@ -135,7 +135,7 @@ export function formatByteArray(name, bytes, cols = 16) {
  * @param {number[]} words - Array of 16 palette word values.
  * @param {number} cols - Palette entries per line (default 8 → 16 bytes per line).
  */
-export function formatWordArray(name, words, cols = 8) {
+export function toCPaletteArraySourceCode(name, words, cols = 8) {
   // Flatten each 16-bit word to two little-endian bytes.
   // Example: 0x0A00 (Blue) → [0x00, 0x0A]
   const bytes = words.flatMap(w => [w & 0xFF, (w >> 8) & 0xFF]);

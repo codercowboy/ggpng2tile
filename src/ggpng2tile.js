@@ -21,9 +21,11 @@
 import fs from 'fs';
 import path from 'path';
 import { PNG } from 'pngjs';
-import { packGGColor, colorDist, formatByteArray, formatWordArray } from './utils.js';
+import { packGGColor, colorDist, toCTilesArraySoureCode, toCPaletteArraySourceCode } from './ggpng2tileutils.js';
 
 export class GGPng2Tile {
+  debug = false;
+
   /**
    * @param {object} options
    * @param {string} options.input       - Path to the source PNG file.
@@ -58,11 +60,22 @@ export class GGPng2Tile {
       process.exit(input ? 0 : 1);
     }
 
-    return new GGPng2Tile({
+    if (!fs.existsSync(input)) {
+      console.log("Error, file doesn't exist: " + input);
+      process.exit(1);
+    }
+
+    let ggPng2Tile = new GGPng2Tile({
       input,
       outputName,
       fallback: GGPng2Tile.#parseFallback(flags.fallback),
     });
+
+    if (flags['debug'] == true) {
+      ggPng2Tile.debug = true;
+    }
+
+    return ggPng2Tile;
   }
 
   /**
@@ -149,9 +162,9 @@ export class GGPng2Tile {
 
     const c = [
       fileHeader,
-      formatByteArray(`${varName}_tiles`, tileBytes, 4),
+      toCTilesArraySoureCode(`${varName}_tiles`, tileBytes, 4),
       ``,
-      formatWordArray(`${varName}_palette`, paletteWords),
+      toCPaletteArraySourceCode(`${varName}_palette`, paletteWords),
       ``,
     ].join('\n');
 
@@ -160,12 +173,15 @@ export class GGPng2Tile {
       `#ifndef ${varName.toUpperCase()}_H`,
       `#define ${varName.toUpperCase()}_H`,
       ``,
-      `extern const unsigned char ${varName}_tiles[${tileBytes.length}];`,
-      `extern const unsigned char ${varName}_palette[32];`,
+      `#define ${varName}_tiles_count ${numTiles}`,
+      `#define ${varName}_tiles_size_bytes ${tileBytes.length}`,
       ``,
-      `#define ${varName.toUpperCase()}_NUM_TILES ${numTiles}`,
-      `#define ${varName.toUpperCase()}_TILES_SIZE ${tileBytes.length}`,
-      `#define ${varName.toUpperCase()}_PALETTE_SIZE 32`,
+      `extern const unsigned char ${varName}_tiles[${tileBytes.length}];`,
+      ``,
+      `#define ${varName}_palette_color_count 16`,
+      `#define ${varName}_palette_size_bytes 32`,
+      ``,
+      `extern const unsigned char ${varName}_palette[32];`,
       ``,
       `#endif`,
       ``,
@@ -198,7 +214,7 @@ export class GGPng2Tile {
     const { data, width, height } = png;
 
     // Start with one entry so that index 0 is always the transparent slot.
-    const palette = [{ r: 0, g: 0, b: 0 }];
+    const palette = [{ "r": 0, "g": 0, "b": 0, "a": 0 }];
 
     // Keys are "r,g,b" strings. Values are palette indices.
     const seen = new Map();
@@ -213,23 +229,51 @@ export class GGPng2Tile {
         //   i = (2 * 16 + 3) * 4 = 35 * 4 = 140
         //   data[140] = R, data[141] = G, data[142] = B, data[143] = A
         const i = (y * width + x) * 4;
+
+        const r = data[i], g = data[i + 1], b = data[i + 2];
         const a = data[i + 3];
+
+        const key = `${r},${g},${b}`;
+        const paletteColor = { "r": r, "g": g, "b": b, "a": a };
+
+        if (this.debug) {
+          console.log("Color at " + x + "x" + y, { "color": paletteColor, "key": key });
+        }
 
         // Treat any pixel with alpha below 50% as fully transparent.
         // It will map to palette index 0 at encode time.
-        if (a < 128) continue;
-
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const key = `${r},${g},${b}`;
-
-        if (!seen.has(key)) {
-          // 16 entries total (index 0 through 15). If we've already filled all
-          // 16, flag the overflow and skip — this color will be handled by the
-          // fallback during encoding.
-          if (palette.length >= 16) { overflow = true; continue; }
-          seen.set(key, palette.length); // next available index
-          palette.push({ r, g, b });
+        if (a < 128) {
+          if (this.debug) {
+            console.log("Skipping this color, alpha < 128");
+          }
+          continue;
         }
+        
+        if (seen.has(key)) {
+          if (this.debug) {
+            console.log("Skipping this color, it's already in palette");
+          }
+          continue;
+        }
+
+        // 16 entries total (index 0 through 15). If we've already filled all
+        // 16, flag the overflow and skip — this color will be handled by the
+        // fallback during encoding.
+
+        if (palette.length >= 16) { 
+          overflow = true; 
+          if (this.debug) {
+            console.log("Skipping this color, palette is full");
+          }
+          continue; 
+        }
+
+        if (this.debug) {
+          console.log("Saving this color at palette index " + palette.length);
+        }
+
+        seen.set(key, palette.length); // next available index
+        palette.push(paletteColor);
       }
     }
 
@@ -427,10 +471,14 @@ export class GGPng2Tile {
     console.log('  output_name    C variable/file prefix (default: filename without extension)');
     console.log('');
     console.log('Options:');
-    console.log('  --fallback=<value>   behavior when palette is full (default: nearest)');
-    console.log('    nearest            map excess colors to the closest palette entry');
-    console.log('    transparent        map excess colors to transparent (index 0)');
-    console.log('    0-15               map excess colors to a specific palette index');
+    console.log('');
+    console.log('  --fallback=<value> = behavior when palette is full (default: nearest)');
+    console.log('.      nearest            map excess colors to the closest palette entry');
+    console.log('       transparent        map excess colors to transparent (index 0)');
+    console.log('       0-15               map excess colors to a specific palette index');
+    console.log('');
+    console.log('  --debug = debug mode, *very* verbose');
+    console.log('');
   }
 }
 
