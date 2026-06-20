@@ -1,3 +1,5 @@
+import { HexUtils } from './HexUtils.js';
+
 /**
  * Scale an 8-bit color channel (0-255) down to a 4-bit value (0-15).
  *
@@ -21,8 +23,8 @@
  *   convert8bitColorTo4bit(128) → 128 >> 4 = 8    (0b1000)
  *   convert8bitColorTo4bit(0)   → 0   >> 4 = 0    (0b0000)
  */
-export function convert8bitColorTo4bit(v) {
-  return (v >> 4) & 0xF;
+export function convert8bitColorTo4bit(value) {
+  return (value >> 4) & 0xF;
 }
 
 /**
@@ -52,8 +54,10 @@ export function convert8bitColorTo4bit(v) {
  * This word is stored little-endian in the GG's CRAM, so bytes on disk
  * would be 0x8F, 0x00.
  */
-export function packGGColor(r, g, b) {
-  return (convert8bitColorTo4bit(b) << 8) | (convert8bitColorTo4bit(g) << 4) | convert8bitColorTo4bit(r);
+export function packGGColor(red, green, blue) {
+  return (convert8bitColorTo4bit(blue) << 8) 
+    | (convert8bitColorTo4bit(green) << 4) 
+    | convert8bitColorTo4bit(red);
 }
 
 /**
@@ -77,18 +81,6 @@ export function colorDist(r1, g1, b1, r2, g2, b2) {
 }
 
 /**
- * Format a byte value (0-255) as a two-digit lowercase hex literal.
- * Example: hex2(255) → '0xff',  hex2(10) → '0x0a'
- */
-export function hex2(v) { return `0x${v.toString(16).padStart(2, '0')}`; }
-
-/**
- * Format a 16-bit word (0-65535) as a four-digit lowercase hex literal.
- * Example: hex4(256) → '0x0100',  hex4(15) → '0x000f'
- */
-export function hex4(v) { return `0x${v.toString(16).padStart(4, '0')}`; }
-
-/**
  * Render a flat byte array as a C unsigned char array definition.
  *
  * Output example for a 4-byte array named "ship_tiles":
@@ -103,9 +95,19 @@ export function hex4(v) { return `0x${v.toString(16).padStart(4, '0')}`; }
  */
 export function toCTilesArraySoureCode(name, bytes, cols = 16) {
   const lines = [`const unsigned char ${name}[${bytes.length}] = {`];
-  for (let i = 0; i < bytes.length; i += cols) {
-    const chunk = bytes.slice(i, i + cols).map(hex2).join(', ');
-    lines.push(`    ${chunk},`);
+  let line = "    ";
+  let colCount = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    line += HexUtils.toHex2(bytes[i], "0x") + ", ";
+    colCount += 1;
+    if (colCount == cols) {
+      colCount = 0;
+      lines.push(line.slice(0, line.length - 1));
+      line = "    ";
+    }
+  }
+  if (colCount > 0) {
+    lines.push(line.slice(0, line.length - 1));
   }
   lines.push(`};`);
   return lines.join('\n');
@@ -136,15 +138,31 @@ export function toCTilesArraySoureCode(name, bytes, cols = 16) {
  * @param {number} cols - Palette entries per line (default 8 → 16 bytes per line).
  */
 export function toCPaletteArraySourceCode(name, words, cols = 8) {
-  // Flatten each 16-bit word to two little-endian bytes.
-  // Example: 0x0A00 (Blue) → [0x00, 0x0A]
-  const bytes = words.flatMap(w => [w & 0xFF, (w >> 8) & 0xFF]);
-  const byteCols = cols * 2; // 2 bytes per palette entry
-  const lines = [`const unsigned char ${name}[${bytes.length}] = {`];
-  for (let i = 0; i < bytes.length; i += byteCols) {
-    const chunk = bytes.slice(i, i + byteCols).map(hex2).join(', ');
-    lines.push(`    ${chunk},`);
+  const lines = [`const unsigned char ${name}[${words.length * 2}] = {`];
+  let line = "    ";
+  let colCount = 0;
+  for (let i = 0; i < words.length; i++) {
+    line += HexUtils.toHex2(words[i] & 0xFF, "0x") + ", "; // first byte of word 
+    line += HexUtils.toHex2((words[i] >> 8) & 0xFF, "0x") + ", "; // second byte of word
+    colCount += 1;
+    if (colCount == cols) {
+      colCount = 0;
+      lines.push(line.slice(0, line.length - 1));
+      line = "    ";
+    }
+  }
+  if (colCount > 0) {
+    lines.push(line.slice(0, line.length - 1));
   }
   lines.push(`};`);
   return lines.join('\n');
+}
+
+export function denull(value, defaultValue) {
+  return value == null ? defaultValue : value;
+}
+
+export function cloneObject(object) {
+  let clone = object == null ? null : Object.assign(Object.create(Object.getPrototypeOf(object)), object);
+  return clone;
 }
