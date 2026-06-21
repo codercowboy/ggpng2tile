@@ -2,10 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { PNG } from 'pngjs';
 import { HexUtils } from './HexUtils.js';
-import { cloneObject } from './ggpng2tileutils.js';
+import { cloneObject, getEuclideanColorDistance } from './ggpng2tileutils.js';
 
 export class PaletteManager {
-    paletteEntries = new Map();
+    paletteEntriesMap = new Map();
 
     static fromPNGFile(pngFile) {         
         console.log(`Reading palette from '${pngFile}'`);
@@ -30,34 +30,20 @@ export class PaletteManager {
                 const alpha = parseFloat(data[i + 3]) / 255.0;
                 const htmlHex = HexUtils.rgbToHTMLHex(red, green, blue);
 
-                //console.log(`${x}x${y} = r${red}, g${green}, b${blue}, a${alpha}, html${htmlHex}`);
-
-                let paletteEntry = paletteManager.incrementPaletteUseCount(red, green, blue, alpha);
+                let paletteEntry = paletteManager.getPaletteEntry(red, green, blue, alpha);
+                if (paletteEntry == null) {
+                    paletteEntry = new PaletteEntry(red, green, blue, alpha);
+                    paletteManager.addPaletteEntry(paletteEntry);
+                }
+                paletteEntry.useCount = paletteEntry.useCount + 1;
                 paletteEntry.htmlHex = htmlHex;
             }
         }
         return paletteManager;
-    }
-
-    /*
-        red/green/blue - number 0 to 255
-        alpha - float 0 to 1.0
-        
-        returns relevant PaletteEntry
-    */
-    incrementPaletteUseCount(red, green, blue, alpha) {
-        let key = PaletteManager.createPaletteEntryKeyRGBA(red, green, blue, alpha);
-        let paletteEntry = this.paletteEntries.get(key);
-        if (paletteEntry == null) {
-            paletteEntry = new PaletteEntry(red, green, blue, alpha, 0);
-            this.paletteEntries.set(key, paletteEntry);
-        }
-        paletteEntry.useCount = paletteEntry.useCount + 1;
-        return paletteEntry;
-    }
+    }    
 
     static createPaletteEntryKey(paletteEntry) {
-        let key = `r${paletteEntry.red}g${paletteEntry.green}b${paletteEntry.blue}a${paletteEntry.alpha}`;
+        let key = PaletteManager.createPaletteEntryKeyRGBA(paletteEntry.red, paletteEntry.green, paletteEntry.blue, paletteEntry.alpha);
         return key;
     }
 
@@ -66,25 +52,82 @@ export class PaletteManager {
         return key;
     }
 
+    getPaletteEntry(red, green, blue, alpha) {
+        let key = PaletteManager.createPaletteEntryKeyRGBA(red, green, blue, alpha);
+        let paletteEntry = this.paletteEntriesMap.get(key);
+        return paletteEntry;
+    }
+
+    getPaletteEntries() {
+        return Array.from(this.paletteEntriesMap.values());
+    }
+
+    getPaletteEntryCount() {
+        return this.paletteEntriesMap.size;
+    }
+
+    addPaletteEntry(paletteEntry) {
+        if (paletteEntry == null) {
+            return;
+        }
+        let key = PaletteManager.createPaletteEntryKey(paletteEntry);
+        paletteEntry.index = this.paletteEntriesMap.size;
+        this.paletteEntriesMap.set(key, paletteEntry);
+    }
+
+    getNearestPaletteEntry(red, green, blue, alpha) {
+        // return the paletteEntry whose color is closest in RGB space.
+        let bestPaletteEntry = null, bestDistance = Infinity;
+        for (let paletteEntry of this.paletteEntriesMap.values()) {
+            const distance = getEuclideanColorDistance(red, green, blue, 
+                paletteEntry.red, paletteEntry.green, paletteEntry.blue);
+            if (distance < bestDistance) { 
+                bestDistance = distance; 
+                bestPaletteEntry = paletteEntry; 
+            }
+        }
+        return bestPaletteEntry;
+    }
+
     combineUseCounts(thatPaletteManager) {
         if (thatPaletteManager == null) {
             return;
         }
         for (let thatPaletteEntry of thatPaletteManager.paletteEntries.values()) {
             let key = PaletteManager.createPaletteEntryKey(thatPaletteEntry);
-            let thisPaletteEntry = this.paletteEntries.get(key);
+            let thisPaletteEntry = this.paletteEntriesMap.get(key);
             if (thisPaletteEntry == null) {
                 thisPaletteEntry = cloneObject(thatPaletteEntry);
                 thisPaletteEntry.useCount = 0;
-                this.paletteEntries.set(key, thisPaletteEntry);
+                this.paletteEntriesMap.set(key, thisPaletteEntry);
             }
             thisPaletteEntry.useCount += thatPaletteEntry.useCount;
         }
     }
 
+    reducePaletteSize(targetSize) {
+        if (this.paletteEntriesMap.size < targetSize) {
+            return;
+        }
+
+        let paletteEntriesSortedByUseCount = this.getPaletteEntriesSortedByUseCount();
+        let currentPaletteCount = 0;
+        let tmpPaletteEntriesMap = new Map();
+        for (let paletteEntry of paletteEntriesSortedByUseCount) {
+            let key = PaletteManager.createPaletteEntryKey(paletteEntry);
+            paletteEntry.index = currentPaletteCount;
+            tmpPaletteEntriesMap.set(key, paletteEntry);
+            currentPaletteCount += 1;
+            if (currentPaletteCount == targetSize) {
+                break;
+            }
+        }
+        this.paletteEntriesMap = tmpPaletteEntriesMap;
+    }
+
     getPaletteEntriesSortedByUseCount() {
         let useCountsMap = new Map();
-        for (let paletteEntry of this.paletteEntries.values()) {
+        for (let paletteEntry of this.paletteEntriesMap.values()) {
             let entryList = useCountsMap.get(paletteEntry.useCount);
             if (entryList == null) {
                 entryList = [];
@@ -106,6 +149,17 @@ export class PaletteManager {
         }
         return sortedPaletteEntriesList;
     }
+
+    logStatus(statusDescription) {
+        let count = 1;
+        let status = [];
+        status.push("PaletteManager Status: " + statusDescription); 
+        for (let paletteEntry of this.getPaletteEntriesSortedByUseCount()) {
+            status.push("  Palette Entry #" + count + ": " + paletteEntry.useCount + " uses, " + paletteEntry.toCSSRGBA());
+            count += 1;
+        }
+        console.log(status.join("\n"));
+    }
 }
 
 export class PaletteEntry {
@@ -113,20 +167,19 @@ export class PaletteEntry {
     green = null; // number 0 to 255
     blue = null; // number 0 to 255
     alpha = null; // float 0 to 1.0
+    index = null; // number
 
     useCount = 0; // number
 
     /*
         red/green/blue - int numbers between 0 and 255
         alpha - float number between 0 and 1, ie 0.5
-        usecount - int number
     */
-    constructor(red, green, blue, alpha, useCount) {
+    constructor(red, green, blue, alpha) {
         this.red = HexUtils.denull(red, 0);
         this.green = HexUtils.denull(green, 0);
         this.blue = HexUtils.denull(blue, 0);
         this.alpha = HexUtils.denull(alpha, 1.0);
-        this.useCount = HexUtils.denull(useCount, 0);
     }
 
     toHTMLHex(includePrefix) {

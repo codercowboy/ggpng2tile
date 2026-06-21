@@ -76,7 +76,7 @@ export function packGGColor(red, green, blue) {
  * means it may not always pick the most visually similar color, but it's
  * fast and good enough for palette-limited pixel art.
  */
-export function colorDist(r1, g1, b1, r2, g2, b2) {
+export function getEuclideanColorDistance(r1, g1, b1, r2, g2, b2) {
   return (r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2;
 }
 
