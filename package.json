@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/ggpng2tile.js",
   "bin": {
-    "ggpng2tile": "./src/ggpng2tile.js"
+    "ggpng2tile": "./src/GGPNG2Tile.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

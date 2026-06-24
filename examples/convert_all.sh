@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-TOOL="$DIR/../src/ggpng2tile.js"
+TOOL="$DIR/../src/GGPNG2Tile.js"
 
 cd "$DIR"
 

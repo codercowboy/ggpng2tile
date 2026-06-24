@@ -2,29 +2,34 @@ import fs from 'fs';
 import path from 'path';
 import { PNG } from 'pngjs';
 import { HexUtils } from './HexUtils.js';
-import { cloneObject, getEuclideanColorDistance } from './GGPNG2TileUtils.js';
+import { cloneObject } from './GGPNG2TileUtils.js';
 
 export class PaletteManager {
     paletteEntriesMap = new Map();
 
-    static fromPNGFile(pngFile) {         
-        console.log(`Reading palette from '${pngFile}'`);
-        const raw = fs.readFileSync(pngFile);
+    constructor(pngFilePath) {
+        this.pngFilePath = pngFilePath;
+    }
+
+    static fromPNGFile(pngFilePath) {         
+        console.log(`Reading palette from '${pngFilePath}'`);
+        const raw = fs.readFileSync(pngFilePath);
         const png = PNG.sync.read(raw);
         const { data, width, height } = png;
+        let widthPixels = width, heightPixels = height;
 
-        console.log(`Reading palette from file '${pngFile}', width: ${width}, height: ${height}`);
+        console.log(`Creating palette from file '${pngFilePath}', width: ${widthPixels}, height: ${heightPixels}`);
 
-        let paletteManager = new PaletteManager();
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
+        let paletteManager = new PaletteManager(pngFilePath);
+        for (let y = 0; y < heightPixels; y++) {
+            for (let x = 0; x < widthPixels; x++) {
                 // pngjs lays out pixel data as a flat RGBA byte array.
                 // To get pixel (x, y), skip (y * width + x) pixels, each 4 bytes wide.
                 //
                 // Example: pixel (3, 2) in a 16-pixel-wide image
                 //   i = (2 * 16 + 3) * 4 = 35 * 4 = 140
                 //   data[140] = R, data[141] = G, data[142] = B, data[143] = A
-                const i = (y * width + x) * 4;
+                const i = (y * widthPixels + x) * 4;
 
                 const red = data[i], green = data[i + 1], blue = data[i + 2];
                 const alpha = parseFloat(data[i + 3]) / 255.0;
@@ -56,7 +61,7 @@ export class PaletteManager {
         let key = PaletteManager.createPaletteEntryKeyRGBA(red, green, blue, alpha);
         let paletteEntry = this.paletteEntriesMap.get(key);
         return paletteEntry;
-    }
+    }    
 
     getPaletteEntries() {
         return Array.from(this.paletteEntriesMap.values());
@@ -76,10 +81,16 @@ export class PaletteManager {
     }
 
     getNearestPaletteEntry(red, green, blue, alpha) {
+        // Happy path: color was found during palette building, use its index.
+        let paletteEntry = this.getPaletteEntry(red, green, blue, alpha);
+        if (paletteEntry != null) {
+            return paletteEntry;
+        }
+
         // return the paletteEntry whose color is closest in RGB space.
         let bestPaletteEntry = null, bestDistance = Infinity;
         for (let paletteEntry of this.paletteEntriesMap.values()) {
-            const distance = getEuclideanColorDistance(red, green, blue, 
+            const distance = PaletteManager.getEuclideanColorDistance(red, green, blue, 
                 paletteEntry.red, paletteEntry.green, paletteEntry.blue);
             if (distance < bestDistance) { 
                 bestDistance = distance; 
@@ -159,6 +170,26 @@ export class PaletteManager {
             count += 1;
         }
         console.log(status.join("\n"));
+    }
+
+    /**
+     * Squared Euclidean distance between two RGB colors.
+     *
+     * Used for nearest-color matching when the palette is full and a pixel's
+     * exact color isn't in the palette. We compare squared distances rather
+     * than true distances to avoid the cost of a square root — squaring is
+     * monotonic, so the closest color by squared distance is the same as the
+     * closest color by real distance.
+     *
+     * Example: distance between red (255,0,0) and orange (255,165,0)
+     *   (255-255)² + (0-165)² + (0-0)² = 0 + 27225 + 0 = 27225
+     *
+     * This is purely in RGB space — it's not perceptually weighted, which
+     * means it may not always pick the most visually similar color, but it's
+     * fast and good enough for palette-limited pixel art.
+     */
+    static getEuclideanColorDistance(r1, g1, b1, r2, g2, b2) {
+        return (r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2;
     }
 }
 

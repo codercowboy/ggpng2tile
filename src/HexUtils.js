@@ -1,9 +1,9 @@
 export class HexUtils {
     /**
-     * Format a byte value (0-255) as a two-digit lowercase hex literal.
-     * Example: hex2(255, "0x") -> '0xff',  hex2(10, "#") -> '#0a', hex2(10) -> '0a'
+        Format a byte value (0-255) as a two-digit lowercase hex literal.
+        Example: hex2(255, "0x") -> '0xff',  hex2(10, "#") -> '#0a', hex2(10) -> '0a'
      */
-    static toHex2(value, prefix) { 
+    static toHex2(value, prefix = null) { 
         if (value == null) {
             return HexUtils.denull(prefix, "") + "00";
         } 
@@ -11,11 +11,11 @@ export class HexUtils {
         return HexUtils.denull(prefix, "") + hexValue;
     }
 
-    /**
-     * Format a 16-bit word (0-65535) as a four-digit lowercase hex literal.
-     * Example: hex4(256, "0x") -> '0x0100',  hex4(15, "#") -> '#000f', hex4(15) -> '000f'
+    /*
+        Format a 16-bit word (0-65535) as a four-digit lowercase hex literal.
+        Example: hex4(256, "0x") -> '0x0100',  hex4(15, "#") -> '#000f', hex4(15) -> '000f'
      */
-    static toHex4(value, prefix) {
+    static toHex4(value, prefix = null) {
         if (value == null) {
             return HexUtils.denull(prefix, "") + "0000";
         } 
@@ -52,9 +52,10 @@ export class HexUtils {
     }
 
     /*
-    hexString can be format "0x00", or "00FF00", or "#00FF00", 
+        hexString can be format "0x00", or "00FF00", or "#00FF00", 
         and can be as many digits as wanted such as "00FF00FF00FF"
-    Example: hexString("0xFF") -> 255, hexString("FFFF") -> 65535
+        
+        Example: hexString("0xFF") -> 255, hexString("FFFF") -> 65535
     */
     static hexToNumber(hexString) {
         if (hexString == null) {
@@ -74,7 +75,7 @@ export class HexUtils {
     }
 
     /*
-    hexString can be format "0x00FF00", or "#00FF00", or "00FF00"
+        hexString can be format "0x00FF00", or "#00FF00", or "00FF00"
     */
     static hexStringToRGBAObject(hexString) {
         let rgbaObject = { 

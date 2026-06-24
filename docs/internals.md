@@ -51,6 +51,59 @@ data[143] = A
 
 This formula appears in two places in the code: `#buildPalette` (scanning every pixel to discover colors) and `#encodeTile` (looking up each pixel while encoding an 8x8 block).
 
+*Palette format*
+
+Each GG palette entry is a 12-bit color packed into 2 little-endian bytes: `0000BBBBGGGGRRRR` (4 bits per channel, R in low nibble). The palette is output as `unsigned char[32]` — 16 entries × 2 bytes each — to make the byte layout explicit and avoid any toolchain ambiguity around integer sizes. Index 0 is always the transparent color.
+
+*Tile format*
+
+Each 8×8 tile is 32 bytes. Each row of 8 pixels is stored as 4 bytes (one per bitplane), pixel 0 in the MSB:
+
+```
+row 0: [bitplane 0] [bitplane 1] [bitplane 2] [bitplane 3]
+row 1: ...
+```
+
+*The planar format and its quirks*
+
+Note, this is explained visually in-depth in [docs/walkthrough.html]().
+
+The Game Gear (and SMS) tile format is **planar**, not chunky. In a chunky format you'd store all 4 bits of a pixel's palette index together — e.g. the high nibble of byte 0 is pixel 0, the low nibble is pixel 1, and so on. The GG does not do this.
+
+Instead, each row of 8 pixels is represented by 4 separate bytes — one per **bitplane** — where each byte holds one bit from each of the 8 pixels in that row. Bit 7 of the byte is pixel 0, bit 6 is pixel 1, and so on down to bit 0 for pixel 7.
+
+The part that trips people up is **which bit of the palette index goes into which byte**. You might expect byte 0 to carry the most significant bit (the "first" bit written in binary), but it's the opposite: **byte 0 carries the least significant bit (bit 0) of each pixel's palette index**, byte 1 carries bit 1, byte 2 carries bit 2, and byte 3 carries bit 3 (the MSB).
+
+Concretely, if all 8 pixels in a row are palette index 1 (binary `0001`):
+
+```
+bit 0 of index 1 = 1  →  byte 0 (bitplane 0) = 0xFF  (all 8 pixels have this bit set)
+bit 1 of index 1 = 0  →  byte 1 (bitplane 1) = 0x00
+bit 2 of index 1 = 0  →  byte 2 (bitplane 2) = 0x00
+bit 3 of index 1 = 0  →  byte 3 (bitplane 3) = 0x00
+```
+
+Row encoding: `0xFF 0x00 0x00 0x00`
+
+If you wrote the palette index in binary as `0001` and expected the bytes to flow left-to-right from MSB to LSB, you'd predict `0x00 0x00 0x00 0xFF` — but it's reversed. The LSB comes first.
+
+*PNG bit depth support*
+
+PNG is not a single format — it has several color modes and bit depths. Here's what each means and how this tool handles them:
+
+| Common name | PNG color type | Bits per channel | Total bits/pixel | Notes |
+|---|---|---|---|---|
+| 1-bit indexed | Palette | 1 | 1 | 2-color palette; each pixel is a 1-bit index |
+| 2-bit indexed | Palette | 2 | 2 | 4-color palette |
+| 4-bit indexed | Palette | 4 | 4 | 16-color palette; closest to GG native |
+| 8-bit indexed | Palette | 8 | 8 | 256-color palette, like GIF |
+| 24-bit | RGB | 8 | 24 | Full color, no alpha channel |
+| 32-bit | RGBA | 8 | 32 | Full color + alpha; most common for sprites |
+| 48-bit | RGB | 16 | 48 | 16 bits per channel; rare, used in photography |
+| 64-bit | RGBA | 16 | 64 | 16 bits per channel + alpha; very rare |
+
+**All of the above are supported.** The PNG library used ([pngjs](https://github.com/pngjs/pngjs)) decodes every color mode and bit depth into a normalized 32-bit RGBA buffer before the tool sees any data. So regardless of whether your source file is a 4-bit indexed sprite sheet or a 32-bit RGBA export from Photoshop, the tool processes the same flat pixel array and the color detection logic is identical.
+
 ---
 
 ## Palette building
@@ -241,7 +294,7 @@ Row: 0x0F 0x0F 0x00 0x00
 
 ## Nearest-color matching
 
-When `--fallback=nearest` is active (the default) and a pixel's color isn't in the palette, `#getPaletteIndex` finds the closest palette entry using squared Euclidean distance in RGB space:
+When a pixel's color isn't in the palette, `PaletteManager.#getNearestPaletteEntry` finds the closest palette entry using squared Euclidean distance in RGB space:
 
 ```js
 let best = 1, bestDist = Infinity;
