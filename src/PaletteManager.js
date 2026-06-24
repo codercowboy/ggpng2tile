@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { PNG } from 'pngjs';
 import { HexUtils } from './HexUtils.js';
-import { cloneObject, getEuclideanColorDistance } from './ggpng2tileutils.js';
+import { cloneObject, getEuclideanColorDistance } from './GGPNG2TileUtils.js';
 
 export class PaletteManager {
     paletteEntriesMap = new Map();

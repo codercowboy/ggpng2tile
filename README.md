@@ -161,7 +161,7 @@ png2asset docs: [gbdk.org png2asset settings](https://gbdk.org/docs/api/docs_too
 
 #### [png2tile](https://github.com/yuv422/png2tile) — currently broken on macOS
 
-Compiles without errors on macOS but fails at runtime as of June 18, 2026. A SMS Power Discord user has reportedly gotten a years-old v1.0 release that isn't available on the project's github working, so current issues may be resolved in the near future. 
+Compiles without errors on macOS but fails at runtime as of June 18, 2026. A SMS Power Discord user has reportedly gotten a years-old v1.0 release that isn't available on the project's github page, so current issues may be resolved in the near future. 
 
 png2tile docs: [smspower.org forums thread](https://www.smspower.org/forums/15889-PNG2Tile)
 
@@ -238,6 +238,17 @@ PNG is not a single format — it has several color modes and bit depths. Here's
 
 **All of the above are supported.** The PNG library used ([pngjs](https://github.com/pngjs/pngjs)) decodes every color mode and bit depth into a normalized 32-bit RGBA buffer before the tool sees any data. So regardless of whether your source file is a 4-bit indexed sprite sheet or a 32-bit RGBA export from Photoshop, the tool processes the same flat pixel array and the color detection logic is identical.
 
+Credit
+======
+
+- Numerous threads, articles, and discussions on the [SMS Power!](https://www.smspower.org) forums and discord provided knowledge
+- [Maxim's](https://www.smspower.org/maxim/) [SMS / GG Palette](https://www.smspower.org/maxim/HowToProgram/Palette) and [SMS / GG Tiles](https://www.smspower.org/maxim/HowToProgram/Tiles) pages very clearly explain the bit-by-bit details of the on-device image formatting, better than the Claude generated [docs/walkthrough.html]() in this project.
+- The [pngjs](https://www.npmjs.com/package/pngjs) ([github](https://github.com/pngjs)) pure-javascript library is used to process PNG files. 
+- Anthropic's [Claude Code](https://claude.ai/) wrote 100% of the initial code, documentation, and visual example. Model used was [Sonnet 4.6](https://www.anthropic.com/news/claude-sonnet-4-6) on June 18, 2026. 
+- [sverx's](https://github.com/sverx) [devkitSMS](https://github.com/sverx/devkitSMS) library was used to verify the tool's work in emulators and on device. 
+- krikzz's [EVERDRIVE-GG](https://krikzz.com/our-products/legacy/edgg.html) flash cart was used to test on real hardware
+- Game Gear hardware used was restored/improved by [pizza_whistle](https://www.reddit.com/user/pizza_whistle/).
+
 ## Authors
 
 - **Jason Baker** — [jason@onejasonforsale.com](mailto:jason@onejasonforsale.com)
@@ -280,14 +291,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied.
-
-Credit
-======
-
-- Numerous threads, articles, and discussions on the [SMS Power!](https://www.smspower.org) forums and discord provided knowledge
-- [Maxim's](https://www.smspower.org/maxim/) [SMS / GG Palette](https://www.smspower.org/maxim/HowToProgram/Palette) and [SMS / GG Tiles](https://www.smspower.org/maxim/HowToProgram/Tiles) pages very clearly explain the bit-by-bit details of the on-device image formatting, better than the Claude generated [docs/walkthrough.html]() in this project.
-- The [pngjs](https://www.npmjs.com/package/pngjs) ([github](https://github.com/pngjs)) pure-javascript library is used to process PNG files. 
-- Anthropic's [Claude Code](https://claude.ai/) wrote 100% of the initial code, documentation, and visual example. Model used was [Sonnet 4.6](https://www.anthropic.com/news/claude-sonnet-4-6) on June 18, 2026. 
-- [sverx's](https://github.com/sverx) [devkitSMS](https://github.com/sverx/devkitSMS) library was used to verify the tool's work in emulators and on device. 
-- krikzz's [EVERDRIVE-GG](https://krikzz.com/our-products/legacy/edgg.html) flash cart was used to test on real hardware
-- Game Gear hardware used was restored/improved by [pizza_whistle](https://www.reddit.com/user/pizza_whistle/).
